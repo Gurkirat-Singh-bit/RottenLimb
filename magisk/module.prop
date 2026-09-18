@@ -1,0 +1,7 @@
+id=instagram_package_reservation
+name=Instagram Package Reservation
+version=1.0
+versionCode=1
+author=local
+description=Reserves com.instagram.android with an inert system package.
+

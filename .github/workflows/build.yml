@@ -1,0 +1,69 @@
+name: Build blocker
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Verify source invariants
+        run: ./tools/verify-source.sh
+
+      - name: Build unsigned release APK
+        run: gradle --no-daemon :app:assembleRelease
+
+      - name: Sign and verify APK
+        env:
+          STORE_PASSWORD: reservation-build
+        run: |
+          mkdir -p dist
+          keytool -genkeypair -noprompt \
+            -keystore build/reservation.jks \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$STORE_PASSWORD" \
+            -alias reservation \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Local Package Reservation"
+          apksigner sign \
+            --ks build/reservation.jks \
+            --ks-pass "pass:$STORE_PASSWORD" \
+            --key-pass "pass:$STORE_PASSWORD" \
+            --out dist/instagram-package-reservation.apk \
+            app/build/outputs/apk/release/app-release-unsigned.apk
+          apksigner verify --verbose --print-certs dist/instagram-package-reservation.apk
+          test "$(apkanalyzer manifest application-id dist/instagram-package-reservation.apk)" = "com.instagram.android"
+
+      - name: Package Magisk module
+        run: ./tools/package-magisk.sh dist/instagram-package-reservation.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: instagram-package-reservation-${{ github.run_number }}
+          path: |
+            dist/instagram-package-reservation.apk
+            dist/instagram-package-reservation-magisk.zip
+          if-no-files-found: error
+          retention-days: 30
+
