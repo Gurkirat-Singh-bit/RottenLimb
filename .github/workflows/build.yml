@@ -40,7 +40,7 @@ jobs:
         env:
           STORE_PASSWORD: reservation-build
         run: |
-          mkdir -p dist
+          mkdir -p build dist
           keytool -genkeypair -noprompt \
             -keystore build/reservation.jks \
             -storepass "$STORE_PASSWORD" \
