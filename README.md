@@ -1,74 +1,163 @@
-# Instagram Package Reservation
+# RottenLimb
 
-A code-free Android package that occupies `com.instagram.android`. Because it
-is signed with a different key from Meta's APK, Android rejects the official
-Instagram app as an incompatible update while this package exists.
+[![Build blocker](https://github.com/Gurkirat-Singh-bit/RottenLimb/actions/workflows/build.yml/badge.svg)](https://github.com/Gurkirat-Singh-bit/RottenLimb/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-The APK has no activities, icon, permissions, services, receivers, providers,
-network access, or executable code. It only appears in system package listings
-as **Package Reservation**.
+RottenLimb builds a deliberately inert Android package that reserves Instagram's
+official application ID, `com.instagram.android`. Android permits only one
+installed package with an application ID and requires compatible signing
+certificates for updates. The reservation uses a different certificate, so the
+official Instagram APK should be rejected as an incompatible update while the
+reservation remains present.
 
-## Important limits
+> [!WARNING]
+> This is an experimental personal tool, not an unbreakable security control.
+> The Magisk version requires an already-rooted phone. Root and an unlocked boot
+> state carry significant security, compatibility, update, and recovery risks.
+> Back up the phone and know how to recover it before installing anything.
 
-- A normal APK can be uninstalled. The included Magisk packaging mounts it as
-  a system app, but anyone retaining root and Magisk control can remove the
-  module.
-- This blocks `com.instagram.android`, not Instagram's website or differently
-  named clients.
-- Installing the Magisk module changes the phone's boot-time system overlay.
-  Keep a tested recovery path and a current backup.
+## What is inside
 
-## Build the APK
+The final APK contains:
 
-Open this directory in Android Studio, let it install Android SDK 36 if needed,
-and build a signed release APK with **Build > Generate Signed App Bundle or APK**.
-Do not commit the signing keystore; `*.jks` and `*.keystore` are ignored.
+- the application ID `com.instagram.android`;
+- the visible system-list label **Package Reservation**;
+- a minimal manifest with `hasCode=false`.
 
-Alternatively, open the repository's **Actions** tab, select **Build blocker**,
-choose **Run workflow**, and download the resulting artifact. It contains both
-the signed APK and installable Magisk ZIP. CI uses a fresh one-off signing key
-for each run, so keep the artifact you install; a later workflow run is not an
-in-place update for an earlier one.
+It contains no DEX bytecode, native code, permissions, activities, services,
+receivers, providers, launcher icon, network access, storage access, analytics,
+telemetry, background process, or interface. CI inspects the final signed APK
+and refuses to publish it if these invariants change.
 
-Before using the result, confirm its identity:
+The Magisk ZIP contains only `module.prop` and that verified APK. It has no boot
+scripts, daemon, Zygisk library, SELinux rules, or system-property changes.
 
-```sh
-apkanalyzer manifest application-id app-release.apk
-apksigner verify --print-certs app-release.apk
-```
+## What it does not block
 
-The first command must print `com.instagram.android`.
+- Instagram in a browser
+- Instagram Lite or a client with another package name
+- use on another phone or Android profile
+- a root user removing the Magisk module
+- recovery, factory reset, bootloader unlocking, or firmware reflashing
+- future Android/OEM behavior that has not been tested on your device
 
-## Create the Magisk module
+If Instagram is preinstalled as an OEM system app, stop: replacing that case is
+not tested by this project.
 
-The phone must already use Magisk. Package the signed APK:
+## AI-authorship disclosure
 
-```sh
-./tools/package-magisk.sh /path/to/app-release.apk
-```
+This repository is **mostly AI-written** with OpenAI Codex, including the initial
+implementation, build workflow, documentation, and security audit. AI-generated
+code can be incomplete or confidently wrong. CI verification and human review
+are still required; this disclosure is not a security guarantee. See the full
+[security audit](docs/SECURITY_AUDIT.md).
 
-This creates:
+## Prerequisites
+
+- A current backup and a tested recovery path
+- A phone that is already rooted with a compatible Magisk installation
+- The ability to reboot the phone
+- Optional: ADB for stronger verification and USB transfer
+
+This project does not provide rooting instructions.
+
+## Build or download
+
+Open **Actions → Build blocker → Run workflow**. When the run succeeds, download
+the `instagram-package-reservation-<run number>` artifact. GitHub downloads an
+outer ZIP containing:
 
 ```text
-dist/instagram-package-reservation-magisk.zip
+instagram-package-reservation.apk
+instagram-package-reservation-magisk.zip
+SHA256SUMS.txt
 ```
 
-Before installation, uninstall every existing Instagram package for every
-Android user/profile. Then install the ZIP from the Magisk app and reboot.
+Extract the outer GitHub artifact ZIP. Do **not** extract the inner Magisk ZIP.
+Each workflow run uses a fresh one-off signing key, so keep the exact artifact
+you install; builds from different runs cannot update each other.
 
-Verify after reboot:
+You can also open the project in Android Studio with Android SDK 36. Local
+release builds must be signed with your own protected key.
+
+## Install on the phone
+
+### 1. Back up and remove Instagram
+
+On the phone, open **Settings → Apps → Instagram → Uninstall**. Repeat this in
+every work profile, private space, secondary user, or cloned-app area.
+
+With ADB, verify that the package is gone:
+
+```sh
+adb shell pm path com.instagram.android
+```
+
+The expected result is an error or no package path. If the command returns a
+`/system`, `/product`, or `/system_ext` path, Instagram is preinstalled as a
+system app; do not continue with this untested configuration.
+
+### 2. Transfer the Magisk ZIP
+
+Use USB file transfer, Quick Share, another trusted transfer method, or ADB:
+
+```sh
+adb push instagram-package-reservation-magisk.zip /sdcard/Download/
+```
+
+Transfer the inner `instagram-package-reservation-magisk.zip`, not the GitHub
+artifact wrapper and not just the standalone APK.
+
+### 3. Install it from Magisk's Modules screen
+
+1. Open **Magisk**.
+2. Open **Modules**.
+3. Choose **Install from storage**.
+4. Select `instagram-package-reservation-magisk.zip`.
+5. Read the installation output and confirm it finishes without an error.
+6. Reboot when Magisk asks.
+
+Do not install the standalone APK if you want system-app persistence; a normal
+APK can be uninstalled normally.
+
+### 4. Verify after reboot
 
 ```sh
 adb shell pm path com.instagram.android
 adb shell dumpsys package com.instagram.android | grep -E 'codePath|versionName'
 ```
 
-`codePath` should point to a system path rather than `/data/app`. Attempting to
-install Meta's APK should then fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`
-or an equivalent signature-conflict message.
+The package should exist and its code path should resolve through the system
+overlay rather than `/data/app`. The reservation has no launcher icon or screen.
+An attempt to install Meta's APK should fail with a signature/package conflict.
 
-## Source check
+## Remove or upgrade RottenLimb
+
+To undo it, open **Magisk → Modules**, remove **Instagram Package Reservation**,
+and reboot. Verify that `adb shell pm path com.instagram.android` no longer finds
+the reservation before installing Instagram.
+
+Because every CI run has a different signing certificate, changing to a newer
+artifact means removing the old module, rebooting, verifying removal, installing
+the new module, and rebooting again.
+
+If the phone fails to boot, use Magisk's documented module-disable/recovery
+procedure for your exact Magisk and device version. Do not experiment with
+destructive recovery commands without a verified backup.
+
+## Developer verification
 
 ```sh
 ./tools/verify-source.sh
+
+APKSIGNER=/path/to/apksigner \
+APKANALYZER=/path/to/apkanalyzer \
+  ./tools/verify-apk.sh /path/to/reservation.apk
+
+./tools/verify-module.sh \
+  /path/to/instagram-package-reservation-magisk.zip \
+  /path/to/reservation.apk
 ```
+
+Read [SECURITY.md](SECURITY.md) before reporting a vulnerability. Licensed under
+the [MIT License](LICENSE).

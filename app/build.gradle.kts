@@ -5,6 +5,7 @@ plugins {
 android {
     namespace = "local.reservation.instagram"
     compileSdk = 36
+    enableKotlin = false
 
     defaultConfig {
         applicationId = "com.instagram.android"

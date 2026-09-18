@@ -12,18 +12,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           packages: platform-tools
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
         with:
           gradle-version: "9.6.0"
 
@@ -37,10 +37,9 @@ jobs:
         run: gradle --no-daemon :app:assembleRelease
 
       - name: Sign and verify APK
-        env:
-          STORE_PASSWORD: reservation-build
         run: |
           mkdir -p build dist
+          STORE_PASSWORD="$(openssl rand -hex 32)"
           keytool -genkeypair -noprompt \
             -keystore build/reservation.jks \
             -storepass "$STORE_PASSWORD" \
@@ -54,17 +53,27 @@ jobs:
             --key-pass "pass:$STORE_PASSWORD" \
             --out dist/instagram-package-reservation.apk \
             app/build/outputs/apk/release/app-release-unsigned.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/instagram-package-reservation.apk
-          test "$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id dist/instagram-package-reservation.apk)" = "com.instagram.android"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner" \
+          APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" \
+            ./tools/verify-apk.sh dist/instagram-package-reservation.apk
 
       - name: Package Magisk module
-        run: ./tools/package-magisk.sh dist/instagram-package-reservation.apk
+        run: |
+          ./tools/package-magisk.sh dist/instagram-package-reservation.apk
+          ./tools/verify-module.sh \
+            dist/instagram-package-reservation-magisk.zip \
+            dist/instagram-package-reservation.apk
+          sha256sum \
+            dist/instagram-package-reservation.apk \
+            dist/instagram-package-reservation-magisk.zip \
+            > dist/SHA256SUMS.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: instagram-package-reservation-${{ github.run_number }}
           path: |
             dist/instagram-package-reservation.apk
             dist/instagram-package-reservation-magisk.zip
+            dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
