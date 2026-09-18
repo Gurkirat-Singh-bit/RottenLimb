@@ -1,8 +1,8 @@
 # Security audit
 
 **Audit date:** 2026-09-18  
-**Scope:** Android source, final APK, Magisk archive, build workflow, installation
-and removal model  
+**Scope:** Android source, final APK, Magisk archive, build and release workflows,
+installation, and removal model<br>
 **Auditor:** OpenAI Codex (AI-generated analysis; not an independent professional
 penetration test)
 
@@ -37,9 +37,11 @@ the module's resistance to removal.
   malicious replacement artifacts, recovery access, and alternate Instagram
   clients.
 
-Dynamic testing on the owner's actual phone is still required. This audit does
-not cover Magisk itself, the device kernel, bootloader, recovery, OEM firmware,
-GitHub's infrastructure, or Android vulnerabilities.
+The standalone APK was installed successfully on a Xiaomi 22127PC95I running
+Android 14. The package-reservation behavior and cross-profile conflict were
+observed. The Magisk path still requires testing on the owner's exact rooted
+device. This audit does not cover Magisk itself, the device kernel, bootloader,
+recovery, OEM firmware, GitHub's infrastructure, or Android vulnerabilities.
 
 ## Findings
 
@@ -122,12 +124,23 @@ GitHub's infrastructure, or Android vulnerabilities.
 ### AUD-008 — Device/OEM compatibility remains unverified
 
 - **Severity:** Low
-- **Status:** Open
+- **Status:** Partially tested; Magisk path open
 - **Impact:** Package scan timing, preinstalled Instagram variants, Magisk behavior,
   Android developer verification, and OEM modifications may change results. If
   Instagram is already a system app, this module is not a tested replacement.
 - **Recommendation:** Test on the exact device with a recoverable backup. Confirm
   the system code path and signature-conflict behavior before relying on it.
+
+### AUD-009 — Release publishing can write repository contents
+
+- **Severity:** Low
+- **Status:** Mitigated
+- **Impact:** Creating a GitHub Release requires `contents: write`, which is more
+  privilege than the ordinary build needs.
+- **Mitigation:** The build remains read-only. Only the final release job receives
+  write access, it runs only for version tags, downloads the artifact from the
+  same workflow run, verifies its checksums, and publishes fixed filenames with
+  GitHub's bundled CLI. The workflow does not overwrite an existing release.
 
 ## Properties not present
 
