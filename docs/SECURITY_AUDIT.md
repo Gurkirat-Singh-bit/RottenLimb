@@ -52,8 +52,9 @@ GitHub's infrastructure, or Android vulnerabilities.
 - **Impact:** The manifest's `hasCode=false` prevented normal application-code
   loading, but the README's “no executable code” claim was inaccurate and the
   unused DEX unnecessarily enlarged the artifact and review surface.
-- **Fix:** `enableKotlin = false`; CI now rejects any `classes*.dex` or `lib/`
-  entry in the final APK.
+- **Fix:** `enableKotlin = false` removes the Kotlin runtime. AGP still emits a
+  532-byte empty DEX container, so packaging removes it before alignment and
+  signing. CI rejects any `classes*.dex` or `lib/` entry in the final APK.
 
 ### AUD-002 — Mutable GitHub Action references
 
@@ -62,8 +63,8 @@ GitHub's infrastructure, or Android vulnerabilities.
 - **Cause:** Actions used moving major-version tags.
 - **Impact:** A compromised or unexpectedly changed upstream tag could alter the
   build running with repository permissions.
-- **Fix:** Every third-party action is pinned to a full Git commit SHA. Repository
-  permissions remain read-only.
+- **Fix:** Every third-party action is pinned to a full Git commit SHA and uses a
+  Node.js 24-native release. Repository permissions remain read-only.
 
 ### AUD-003 — Build credential looked reusable
 
@@ -99,11 +100,12 @@ GitHub's infrastructure, or Android vulnerabilities.
 ### AUD-006 — Rooting broadens the phone's security exposure
 
 - **Severity:** Medium; environmental
-- **Status:** Accepted prerequisite
+- **Status:** Accepted prerequisite for the optional Magisk method only
 - **Impact:** Root/unlocked boot state can weaken platform integrity guarantees,
   affect banking/DRM applications and updates, and increase the consequence of a
   malicious root module. This project does not root the phone, but its Magisk
-  delivery assumes that risk already exists.
+  delivery assumes that risk already exists. The standalone APK does not require
+  root and avoids this exposure, but it can be uninstalled normally.
 - **Recommendation:** Review the ZIP before installation, keep backups and a known
   recovery path, and do not root a phone solely for this project without accepting
   those tradeoffs.
@@ -146,4 +148,3 @@ privacy risk is negligible because it cannot run or access data. Its meaningful
 risks are operational: installing an untrusted root module, losing recovery
 access, relying on an untested OEM implementation, and believing the reservation
 is stronger or broader than it is.
-

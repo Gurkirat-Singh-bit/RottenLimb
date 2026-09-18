@@ -12,9 +12,10 @@ reservation remains present.
 
 > [!WARNING]
 > This is an experimental personal tool, not an unbreakable security control.
-> The Magisk version requires an already-rooted phone. Root and an unlocked boot
-> state carry significant security, compatibility, update, and recovery risks.
-> Back up the phone and know how to recover it before installing anything.
+> The standalone APK works without root but can be uninstalled normally. The
+> optional Magisk version requires an already-rooted phone and is harder to
+> remove. Do not root a phone just because this project exists without first
+> understanding the security, compatibility, update, and recovery risks.
 
 ## What is inside
 
@@ -54,9 +55,10 @@ are still required; this disclosure is not a security guarantee. See the full
 
 ## Prerequisites
 
-- A current backup and a tested recovery path
-- A phone that is already rooted with a compatible Magisk installation
-- The ability to reboot the phone
+- **No-root install:** Android 8.0 or newer and permission to install the APK
+  from your chosen file manager or browser
+- **Optional Magisk install:** a phone that is already rooted with a compatible
+  Magisk installation, plus a current backup and tested recovery path
 - Optional: ADB for stronger verification and USB transfer
 
 This project does not provide rooting instructions.
@@ -97,18 +99,43 @@ The expected result is an error or no package path. If the command returns a
 `/system`, `/product`, or `/system_ext` path, Instagram is preinstalled as a
 system app; do not continue with this untested configuration.
 
-### 2. Transfer the Magisk ZIP
+### 2. Choose one installation method
 
-Use USB file transfer, Quick Share, another trusted transfer method, or ADB:
+#### Option A — Standalone APK, no root
+
+This is the normal-phone option. Transfer
+`instagram-package-reservation.apk` by USB, Quick Share, or another trusted
+method. With ADB:
+
+```sh
+adb push instagram-package-reservation.apk /sdcard/Download/
+```
+
+On the phone, open the APK from **Files → Downloads**. If Android asks, allow
+**Install unknown apps** for that file-opening app, complete the installation,
+and turn that permission off again afterward. The placeholder has no launcher
+icon or screen; it appears only in Settings' app list as **Package Reservation**.
+
+While this APK remains installed, an Instagram APK signed by Meta should fail
+as an incompatible update. You can still remove the placeholder through
+**Settings → Apps → Package Reservation → Uninstall**.
+
+#### Option B — Magisk module, root required
+
+Use this only if the phone is already rooted and you want removal to require
+opening Magisk rather than the ordinary Android uninstall screen.
+
+Transfer `instagram-package-reservation-magisk.zip` by USB, Quick Share, another
+trusted method, or ADB:
 
 ```sh
 adb push instagram-package-reservation-magisk.zip /sdcard/Download/
 ```
 
 Transfer the inner `instagram-package-reservation-magisk.zip`, not the GitHub
-artifact wrapper and not just the standalone APK.
+artifact wrapper. Do not extract the inner ZIP.
 
-### 3. Install it from Magisk's Modules screen
+Then install it from Magisk's **Modules** screen:
 
 1. Open **Magisk**.
 2. Open **Modules**.
@@ -117,29 +144,29 @@ artifact wrapper and not just the standalone APK.
 5. Read the installation output and confirm it finishes without an error.
 6. Reboot when Magisk asks.
 
-Do not install the standalone APK if you want system-app persistence; a normal
-APK can be uninstalled normally.
-
-### 4. Verify after reboot
+### 3. Verify
 
 ```sh
 adb shell pm path com.instagram.android
 adb shell dumpsys package com.instagram.android | grep -E 'codePath|versionName'
 ```
 
-The package should exist and its code path should resolve through the system
-overlay rather than `/data/app`. The reservation has no launcher icon or screen.
-An attempt to install Meta's APK should fail with a signature/package conflict.
+For the standalone install, the code path should be under `/data/app`. For the
+Magisk install after reboot, it should resolve through the system overlay. The
+reservation has no launcher icon or screen. An attempt to install Meta's APK
+should fail with a signature/package conflict.
 
 ## Remove or upgrade RottenLimb
 
-To undo it, open **Magisk → Modules**, remove **Instagram Package Reservation**,
-and reboot. Verify that `adb shell pm path com.instagram.android` no longer finds
-the reservation before installing Instagram.
+For the standalone APK, open **Settings → Apps → Package Reservation →
+Uninstall**. For the rooted version, open **Magisk → Modules**, remove
+**Instagram Package Reservation**, and reboot. Verify that
+`adb shell pm path com.instagram.android` no longer finds the reservation before
+installing Instagram.
 
 Because every CI run has a different signing certificate, changing to a newer
-artifact means removing the old module, rebooting, verifying removal, installing
-the new module, and rebooting again.
+artifact requires removing the old placeholder first. The Magisk method also
+requires the removal and installation reboots described above.
 
 If the phone fails to boot, use Magisk's documented module-disable/recovery
 procedure for your exact Magisk and device version. Do not experiment with

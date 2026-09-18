@@ -12,20 +12,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
         with:
           packages: platform-tools
 
-      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           gradle-version: "9.6.0"
+          cache-provider: basic
 
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
@@ -40,6 +41,10 @@ jobs:
         run: |
           mkdir -p build dist
           STORE_PASSWORD="$(openssl rand -hex 32)"
+          zip -d app/build/outputs/apk/release/app-release-unsigned.apk classes.dex
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -f -p 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            build/reservation-aligned.apk
           keytool -genkeypair -noprompt \
             -keystore build/reservation.jks \
             -storepass "$STORE_PASSWORD" \
@@ -52,7 +57,7 @@ jobs:
             --ks-pass "pass:$STORE_PASSWORD" \
             --key-pass "pass:$STORE_PASSWORD" \
             --out dist/instagram-package-reservation.apk \
-            app/build/outputs/apk/release/app-release-unsigned.apk
+            build/reservation-aligned.apk
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner" \
           APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" \
             ./tools/verify-apk.sh dist/instagram-package-reservation.apk
@@ -68,7 +73,7 @@ jobs:
             dist/instagram-package-reservation-magisk.zip \
             > dist/SHA256SUMS.txt
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: instagram-package-reservation-${{ github.run_number }}
           path: |
