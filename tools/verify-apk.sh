@@ -21,8 +21,11 @@ if printf '%s\n' "$manifest" | grep -Eq '<uses-permission|<(activity|activity-al
     exit 1
 fi
 
-if unzip -Z1 "$apk" | grep -Eq '(^|/)classes[^/]*\.dex$|(^|/)lib/'; then
+executable_entries=$(unzip -Z1 "$apk" | grep -E '(^|/)classes[^/]*\.dex$|(^|/)lib/' || true)
+if [ -n "$executable_entries" ]; then
     echo "APK contains DEX or native executable code" >&2
+    printf '%s\n' "$executable_entries" >&2
+    unzip -l "$apk" >&2
     exit 1
 fi
 
