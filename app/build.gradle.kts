@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "local.package.reservation"
+    namespace = "local.reservation.instagram"
     compileSdk = 36
 
     defaultConfig {
@@ -20,4 +20,3 @@ android {
         }
     }
 }
-
