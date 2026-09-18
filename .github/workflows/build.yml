@@ -48,14 +48,14 @@ jobs:
             -alias reservation \
             -keyalg RSA -keysize 4096 -validity 10000 \
             -dname "CN=Local Package Reservation"
-          apksigner sign \
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
             --ks build/reservation.jks \
             --ks-pass "pass:$STORE_PASSWORD" \
             --key-pass "pass:$STORE_PASSWORD" \
             --out dist/instagram-package-reservation.apk \
             app/build/outputs/apk/release/app-release-unsigned.apk
-          apksigner verify --verbose --print-certs dist/instagram-package-reservation.apk
-          test "$(apkanalyzer manifest application-id dist/instagram-package-reservation.apk)" = "com.instagram.android"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/instagram-package-reservation.apk
+          test "$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id dist/instagram-package-reservation.apk)" = "com.instagram.android"
 
       - name: Package Magisk module
         run: ./tools/package-magisk.sh dist/instagram-package-reservation.apk
