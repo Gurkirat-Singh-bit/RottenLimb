@@ -68,10 +68,12 @@ jobs:
           ./tools/verify-module.sh \
             dist/instagram-package-reservation-magisk.zip \
             dist/instagram-package-reservation.apk
+          cd dist
           sha256sum \
-            dist/instagram-package-reservation.apk \
-            dist/instagram-package-reservation-magisk.zip \
-            > dist/SHA256SUMS.txt
+            instagram-package-reservation.apk \
+            instagram-package-reservation-magisk.zip \
+            > SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
 
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
